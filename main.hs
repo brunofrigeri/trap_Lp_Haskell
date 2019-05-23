@@ -45,7 +45,6 @@ procuraNaTuplaSaida tuplaSaida pontoProcurado = do
   else do
     procuraNaTuplaSaida (tail tuplaSaida) pontoProcurado
 
-
 escreveNoArquivo tuplaSaida arrayProcurado imprimeSaida = do
   let pontoProcurado = head arrayProcurado
   pontoEncontrado <- procuraNaTuplaSaida tuplaSaida pontoProcurado
@@ -157,16 +156,43 @@ rodaAlgoritmo pontos x lideres grupos distancia = do
         let lider = (head pontos)
         let grupo = [(head pontos)]
         let grupoAtualizado = [(lider, grupo)]
-        print grupoAtualizado
-        rodaAlgoritmo (tail pontos) (x+1) lider grupoAtualizado distancia
-    else do
-        print lideres
-        -- let distanciaEntrePontos = percorrePontos2 (head lideres) (head pontos)        
+
+        let novoLider = [(head pontos)]
+        
+        rodaAlgoritmo (tail pontos) (x+1) novoLider grupoAtualizado distancia
+    else do        
+        let distanciaEntrePontos = sqrt(listaSoma(percorrePontos2 (head lideres) (head pontos)) 0)
+        
+        let ponto = (head pontos)
+        let lider = (head lideres)
+        
+        if(distanciaEntrePontos <= distancia) then do
+            grupo <- procuraPontoNaTuplaEInsere ponto lider grupos []            
+            
+        else do 
+            return grupos
+            
+
         if(length(tail pontos) == 0) then do 
-            return (lideres, grupos)
+            return grupos
         else do    
             rodaAlgoritmo (tail pontos) (x+1) lideres grupos distancia
 
+        
+
+procuraPontoNaTuplaEInsere pontoInserido ponto grupos header = do
+    if (ponto == fst (head grupos)) then do
+        let grupo = pontoInserido: (snd (head grupos))
+        let headerAtt = (ponto, grupo)
+        if (length (tail grupos) == 0) then do
+            let headerAtt2 = headerAtt: header
+            return headerAtt2
+        else do
+            let headerAtt3 = header++ (headerAtt: (tail grupos))
+            return headerAtt3
+    else do
+        let headerAtt = (head grupos): header
+        procuraPontoNaTuplaEInsere pontoInserido ponto (tail grupos) headerAtt            
                     
 percorrePontos2 [] [] = [] 
 percorrePontos2 (x:xs) (y:ys) = ((x-y)*(x-y)): percorrePontos2 xs ys
