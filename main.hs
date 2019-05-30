@@ -1,7 +1,5 @@
 import System.IO
 import Data.List
-import qualified Data.Text    as Text
-import qualified Data.Text.IO as Text
 import Numeric
 
 stringConvToFloat [] = []
@@ -20,22 +18,16 @@ main = do
     let pontosIO = stringConvToFloat ls
     let tuplaSaida = colocaPontosEmTupla pontosIO 1
     num <- readFile ("distancia.txt")
-    let distancia = read num :: Int    
-    lider <- rodaAlgoritmo pontosIO 1 [] [] distancia
-    print lider
-    -- centroide <- calculaCentroide (fst primeirosLideres)
-    -- lideres <- selecionaUltimosLideres centroide x (snd primeirosLideres) (fst primeirosLideres)
-    -- let pontosLideres = criaArrayDeTuplas (snd lideres)
-    -- grupo <- distribui pontosIO (snd lideres) 0 pontosLideres []
-    -- sse <- calculaSSE grupo 0
-    -- writeFile "results.txt" (formatFloatN sse 4)
-    -- saida <- openFile "saida.txt" WriteMode
-    -- ggg <- escreveSaida (tuplaSaida) grupo saida
-    -- hClose saida
+    let distancia = read num :: Double
 
----------------------------------------------------------------------
--- Funcao que seleciona os dois primeiros lideres pelos metodos a) e b)
----------------------------------------------------------------------
+    grupo <- rodaAlgoritmo pontosIO 1 [] [] distancia []
+    sse <- calculaSSE grupo 0
+    print sse
+    writeFile "results.txt" (formatFloatN sse 4)
+    saida <- openFile "saida.txt" WriteMode
+    ggg <- escreveSaida (tuplaSaida) grupo saida
+    hClose saida
+
 procuraNaTuplaSaida tuplaSaida pontoProcurado = do
   let tuplaDaSaida = head tuplaSaida
   let pegaPonto = snd tuplaDaSaida
@@ -59,7 +51,7 @@ escreveNoArquivo tuplaSaida arrayProcurado imprimeSaida = do
     else do
       escreveNoArquivo tuplaSaida (tail arrayProcurado) impressaoSaida
   else do
-    let impressaoSaida = impressaoDeSaida ++ ", " ++ imprimeSaida
+    let impressaoSaida = impressaoDeSaida ++ " " ++ imprimeSaida
 
     if(length (tail (arrayProcurado)) == 0) then do
       return impressaoSaida
@@ -72,114 +64,91 @@ escreveSaida tuplaSaida grupo saida = do
 
   impressao <- escreveNoArquivo tuplaSaida pegaGrupo ""
   hPutStrLn saida impressao
-  hPutStrLn saida ""
 
   if(length(tail (grupo)) == 0) then do
     return grupo
   else do
+    hPutStrLn saida ""
     escreveSaida tuplaSaida (tail grupo) saida
 
----------------------------------------------------------------------
--- Selecionando o ponto cujas coordenadas somadas tem valor mínimo (em caso de
--- empate, seleciona-se aquela cujas primeiras coordenadas tem menor valor).
----------------------------------------------------------------------
-
--- Percorre lista de pontos somando e salvando em um array de tuplas,
--- contendo a (soma, [Ponto]). A lista de somas.
-percorreSomaPontos [] = []
-percorreSomaPontos (x:xs) = ((listaSoma x 0), [xss | xss <- x]): percorreSomaPontos xs
-
+-- Soma elementos da lista
 listaSoma [] soma = soma
 listaSoma (x:xs) soma = listaSoma xs (x+soma)
 
--- Comparando Tuplas para encontrar o valor mínimo
-min' [] = error "empty list"
-min' (x:xs) = minhelper x xs where
-  minhelper m [] = m
-  minhelper m (y:ys) | y < m = minhelper y ys
-                     | otherwise = minhelper m ys
-
--- Pegando Array de Pontos da Tupla encontrada com valor mínimo
-pegaArray:: (Double, [Double]) -> [Double]
-pegaArray (0, []) = []
-pegaArray (x, xs) = xs
-
-removeItem _ [] = []
-removeItem x (y:ys) | x == y = ys
-                    | otherwise = y : removeItem x ys
----------------------------------------------------------------------
--- Selecionando o ponto mais distante do ponto inicial (em caso de empate, selecionando
--- aquele cujas primeiras coordenadas tem menor valor)
----------------------------------------------------------------------
+-- Subtrai elementos da mesma posicao de duas listas
 listaSubtrai [] [] = []
 listaSubtrai (x:xs) (y:ys) = (x-y): listaSubtrai xs ys
 
+-- Quadrado de elemento a elemento da lista
 listaAoQuadrado [] = 0
 listaAoQuadrado (x:xs) = x*x + listaAoQuadrado xs
 
-percorrePontos _ [] = []
-percorrePontos x (y:ys) = (sqrt(listaAoQuadrado(listaSubtrai x y)), [yss | yss <- y]): percorrePontos x ys
+-- Soma vetores da mesma posicao de um array de listas
+somaVetores xs = (map sum . transpose $ xs)
 
-max' [] = error "empty list"
-max' (x:xs) = maxhelper x [xss | xss <- xs] where
-    maxhelper m [] = m
-    maxhelper m (y:ys) | fst y > fst m = maxhelper y ys
-                       | fst y == fst m && snd y < snd m = maxhelper y ys
-                       | otherwise = maxhelper m ys
----------------------------------------------------------------------
--- Selecionando sucessivamente, até completar os K pontos iniciais, o ponto mais
--- distante do centróide do grupo formado pelos pontos selecionados até então (em
--- caso de empate, seleciona-se aquele cujas primeiras coordenadas tem menor valor)
----------------------------------------------------------------------
--- calculaCentroide xs = map (/2) (map sum . transpose $ xs)
-
+-- Calcula o centróide de um array de listas
 calculaCentroide xs = do
-  let misturaVetores = xs
-  let tamanhoVetor = (length(misturaVetores))
-  let pontosNovos = transposta misturaVetores
-  let novoCentroide = (percorreSomando pontosNovos)
-  let centro = percorreDividindo novoCentroide (fromIntegral $ tamanhoVetor)
+  let vetor = somaVetores xs
+  let tamanhoVetor = (length(xs))
+  let centro = percorreDividindo vetor (fromIntegral $ tamanhoVetor)
 
   return centro
 
----------------------------------------------------------------------
--- Distribuir os pontos em K grupos de acordo com a distância mais próxima do
--- ponto para os centróides dos grupos (em caso de empate, atribuir o ponto ao
--- grupo do centróide cujas primeiras coordenadas tem menor valor)
----------------------------------------------------------------------
-
-criaArrayDeTuplas [] = []
-criaArrayDeTuplas lideres = (head (lideres),[]): criaArrayDeTuplas (tail lideres)
-
-rodaAlgoritmo pontos x lideres grupos distancia = do
-    if (x == 1) then do 
+-- Funcao responsável por rodar o algoritmo de distribuicao de pontos,
+-- percorrendo a lista de pontos, quando encontrado um novo lider, concatena
+-- o lider em um array de lideres, e, cria uma tupla contendo o novo lider e
+-- seu ponto (mesmo ponto), concatenando com os grupos ja criados.
+-- Por outro lado, quando encontrado um ponto que pertence a um grupo existente
+-- o ponto é adicionado ao grupo já existente.
+rodaAlgoritmo pontos x lideres grupos distancia arrayLideres = do
+    if (x == 1) then do
         let lider = (head pontos)
         let grupo = [(head pontos)]
         let grupoAtualizado = [(lider, grupo)]
 
         let novoLider = [(head pontos)]
-        
-        rodaAlgoritmo (tail pontos) (x+1) novoLider grupoAtualizado distancia
-    else do        
+        let arrayLideresNovo = novoLider
+
+        rodaAlgoritmo (tail pontos) (x+1) novoLider grupoAtualizado distancia arrayLideresNovo
+    else do
         let distanciaEntrePontos = sqrt(listaSoma(percorrePontos2 (head lideres) (head pontos)) 0)
-        
+
         let ponto = (head pontos)
         let lider = (head lideres)
-        
+
+        print ponto
+        print lider
+        print arrayLideres
+
         if(distanciaEntrePontos <= distancia) then do
-            grupo <- procuraPontoNaTuplaEInsere ponto lider grupos []            
-            
-        else do 
-            return grupos
-            
+            gruposAtualizados <- procuraPontoNaTuplaEInsere ponto lider grupos []
 
-        if(length(tail pontos) == 0) then do 
-            return grupos
-        else do    
-            rodaAlgoritmo (tail pontos) (x+1) lideres grupos distancia
+            if (length (tail pontos) == 0) then do
+                return gruposAtualizados
+            else do
+                -- print arrayLideres
+                rodaAlgoritmo (tail pontos) (x+1) arrayLideres gruposAtualizados distancia arrayLideres
 
-        
+        else do
+            if(length (tail lideres) == 0) then do
+                let novoArrayLideres = insereLista ponto lideres
+                let gruposAtualizados = (ponto, [ponto]): grupos
 
+                if (length (tail pontos) == 0) then do
+                    return gruposAtualizados
+                else do
+                    rodaAlgoritmo (tail pontos) (x+1) novoArrayLideres gruposAtualizados distancia novoArrayLideres
+            else do
+              rodaAlgoritmo pontos x (tail lideres) grupos distancia arrayLideres
+
+
+insereLista a [] = [a]
+insereLista a (x:xs) = x : insereLista a xs
+
+
+-- Como o nome da funcao já diz, procura um ponto na tupla (grupos) e insere,
+-- a funcao abaixo é responsável por procurar o lider encontrado que se relaciona
+-- ao ponto, e inserir o ponto ao grupo desse lider.
 procuraPontoNaTuplaEInsere pontoInserido ponto grupos header = do
     if (ponto == fst (head grupos)) then do
         let grupo = pontoInserido: (snd (head grupos))
@@ -192,33 +161,34 @@ procuraPontoNaTuplaEInsere pontoInserido ponto grupos header = do
             return headerAtt3
     else do
         let headerAtt = (head grupos): header
-        procuraPontoNaTuplaEInsere pontoInserido ponto (tail grupos) headerAtt            
-                    
-percorrePontos2 [] [] = [] 
+        procuraPontoNaTuplaEInsere pontoInserido ponto (tail grupos) headerAtt
+
+-- Recebe dois pontos e calcula a distancia entre ambos.
+percorrePontos2 [] [] = []
 percorrePontos2 (x:xs) (y:ys) = ((x-y)*(x-y)): percorrePontos2 xs ys
-            
 
-transposta ([]:_) = []
-transposta m = (map head m) : transposta (map tail m)
-
+-- Percorre um array de listas somando cada vetor e concatenando a soma
+-- com a soma do proximo array.
 percorreSomando [] = []
 percorreSomando (x:xs) = (listaSoma x 0): percorreSomando xs
 
+-- Percorre uma lista dividindo-a por um valor (recebido como parametro).
 percorreDividindo [] y = []
 percorreDividindo (x:xs) y = (x/y): percorreDividindo xs y
 
----------------------------------------------------------------------
--- Retornando a SSE da divisão em grupos e os grupos formados
----------------------------------------------------------------------
-tamanho (x:xs) = length((x:xs))
+-- Como o nome já diz, calcula distancia entre um ponto e um array de pontos,
+-- recebe também um valor default (soma) como 0, que vai sendo somado com a
+-- execucao da funcao.
 calculaDistancia x [] soma = soma
 calculaDistancia x (y:ys) soma = if length((y:ys)) == 0 then soma
                                  else (listaAoQuadrado(listaSubtrai x y)) + calculaDistancia x ys soma
 
+-- Calcula o SSE dos grupos, após todos os grupos estarem formados.
 calculaSSE grupos soma = do
     let cabeca = head grupos
-    let centroide = fst cabeca
     let pontosGrupo = snd cabeca
+
+    centroide <- calculaCentroide (snd cabeca)
 
     let somaAtt = soma + (calculaDistancia centroide pontosGrupo 0)
 
