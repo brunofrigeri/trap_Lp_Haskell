@@ -21,11 +21,11 @@ main = do
     let distancia = read num :: Double
 
     grupo <- rodaAlgoritmo pontosIO 1 [] [] distancia []
+    print grupo
     sse <- calculaSSE grupo 0
-    print sse
     writeFile "results.txt" (formatFloatN sse 4)
     saida <- openFile "saida.txt" WriteMode
-    ggg <- escreveSaida (tuplaSaida) grupo saida
+    arquivoSaida <- escreveSaida (tuplaSaida) grupo saida
     hClose saida
 
 procuraNaTuplaSaida tuplaSaida pontoProcurado = do
@@ -107,18 +107,13 @@ rodaAlgoritmo pontos x lideres grupos distancia arrayLideres = do
         let grupoAtualizado = [(lider, grupo)]
 
         let novoLider = [(head pontos)]
-        let arrayLideresNovo = novoLider
 
-        rodaAlgoritmo (tail pontos) (x+1) novoLider grupoAtualizado distancia arrayLideresNovo
+        rodaAlgoritmo (tail pontos) (x+1) novoLider grupoAtualizado distancia novoLider
     else do
         let distanciaEntrePontos = sqrt(listaSoma(percorrePontos2 (head lideres) (head pontos)) 0)
 
         let ponto = (head pontos)
         let lider = (head lideres)
-
-        print ponto
-        print lider
-        print arrayLideres
 
         if(distanciaEntrePontos <= distancia) then do
             gruposAtualizados <- procuraPontoNaTuplaEInsere ponto lider grupos []
@@ -126,12 +121,11 @@ rodaAlgoritmo pontos x lideres grupos distancia arrayLideres = do
             if (length (tail pontos) == 0) then do
                 return gruposAtualizados
             else do
-                -- print arrayLideres
-                rodaAlgoritmo (tail pontos) (x+1) arrayLideres gruposAtualizados distancia arrayLideres
+              rodaAlgoritmo (tail pontos) (x+1) arrayLideres gruposAtualizados distancia arrayLideres
 
         else do
             if(length (tail lideres) == 0) then do
-                let novoArrayLideres = insereLista ponto lideres
+                let novoArrayLideres = insereLista ponto arrayLideres
                 let gruposAtualizados = (ponto, [ponto]): grupos
 
                 if (length (tail pontos) == 0) then do
